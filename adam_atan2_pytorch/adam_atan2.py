@@ -15,6 +15,8 @@ class AdamAtan2(Optimizer):
         lr = 1e-4,
         betas: tuple[float, float] = (0.9, 0.99),
         weight_decay = 0.,
+        a = 1.27,
+        b = 1.,
     ):
         assert lr > 0.
         assert all([0. <= beta <= 1. for beta in betas])
@@ -25,6 +27,8 @@ class AdamAtan2(Optimizer):
         defaults = dict(
             lr = lr,
             betas = betas,
+            a = a,
+            b = b,
             weight_decay = weight_decay,
         )
 
@@ -44,7 +48,7 @@ class AdamAtan2(Optimizer):
         for group in self.param_groups:
             for p in filter(lambda p: exists(p.grad), group['params']):
 
-                grad, lr, wd, beta1, beta2, state, init_lr = p.grad, group['lr'], group['weight_decay'], *group['betas'], self.state[p], self._init_lr
+                grad, lr, wd, beta1, beta2, a, b, state, init_lr = p.grad, group['lr'], group['weight_decay'], *group['betas'], group['a'], group['b'], self.state[p], self._init_lr
 
                 # weight decay
 
@@ -74,11 +78,10 @@ class AdamAtan2(Optimizer):
                 exp_avg.lerp_(grad, 1. - beta1)
                 exp_avg_sq.lerp_(grad * grad, 1. - beta2)
 
-                denom = exp_avg_sq.div(bias_correction2).sqrt()
-                num = exp_avg.div(bias_correction1)
-                update = num / denom
+                denom = exp_avg_sq.mul(b * b / bias_correction2).sqrt()
+                update = exp_avg.div(bias_correction1).atan2_(denom)
 
-                p.add_(update, alpha = -lr)
+                p.add_(update, alpha = -lr * a)
 
                 state['steps'] = steps
 
