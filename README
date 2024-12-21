@@ -1,5 +1,0 @@
-Adam atan2
-
-Implementation of the proposed optimizer in https://arxiv.org/abs/2407.05872
-
-Learning coding from https://github.com/lucidrains/adam-atan2-pytorch?tab=readme-ov-file
