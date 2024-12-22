@@ -17,3 +17,12 @@ Learning coding from https://github.com/lucidrains/adam-atan2-pytorch?tab=readme
     url     = {https://api.semanticscholar.org/CorpusID:271051056}
 }
 ```
+
+```bibtex
+@inproceedings{Taniguchi2024ADOPTMA,
+    title   = {ADOPT: Modified Adam Can Converge with Any \$\beta\_2\$ with the Optimal Rate},
+    author  = {Shohei Taniguchi and Keno Harada and Gouki Minegishi and Yuta Oshima and Seong Cheol Jeong and Go Nagahara and Tomoshi Iiyama and Masahiro Suzuki and Yusuke Iwasawa and Yutaka Matsuo},
+    year    = {2024},
+    url     = {https://api.semanticscholar.org/CorpusID:273822148}
+}
+```
