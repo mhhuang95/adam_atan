@@ -8,6 +8,9 @@ def exists(val):
     return val is not None
 
 class Adopt(Optimizer):
+    """
+    Implementation of Adopt optimizer in https://arxiv.org/pdf/2411.02853
+    """
     def __init__(
         self,
         params,
@@ -27,6 +30,7 @@ class Adopt(Optimizer):
         defaults = dict(
             lr = lr,
             betas = betas,
+            eps = eps,
             weight_decay = weight_decay,
         )
 
@@ -46,7 +50,10 @@ class Adopt(Optimizer):
         for group in self.param_groups:
             for p in filter(lambda p: exists(p.grad), group['params']):
 
-                grad, lr, wd, beta1, beta2, state, init_lr = p.grad, group['lr'], group['weight_decay'], *group['betas'], self.state[p], self._init_lr
+                grad, lr, wd, beta1, beta2, eps, state, init_lr = p.grad, group['lr'], group['weight_decay'], *group['betas'], group['eps'], self.state[p], self._init_lr
+
+                if self.decoupled_wd:
+                    wd /= init_lr
 
                 # weight decay
 
@@ -59,29 +66,24 @@ class Adopt(Optimizer):
                 if len(state) == 0:
                     state['steps'] = 0
                     state['exp_avg'] = torch.zeros_like(grad)
-                    state['exp_avg_sq'] = torch.zeros_like(grad)
+                    state['exp_avg_sq'] = grad * grad
 
-                
                 exp_avg, exp_avg_sq, steps = state['exp_avg'], state['exp_avg_sq'], state['steps']
 
-                steps += 1
+                # do nothing in the first step
 
-                #bias corrections
+                if steps == 0:
+                    state['steps'] += 1
+                    continue
 
-                bias_correction1 = 1. - beta1 ** steps
-                bias_correction2 = 1. - beta2 ** steps
+                update = grad.div(exp_avg_sq.sqrt().clamp(min = eps))
 
-                #EMA
+                exp_avg.lerp_(update, 1. - beta1)
 
-                exp_avg.lerp_(grad, 1. - beta1)
-                exp_avg_sq.lerp_(grad * grad, 1. - beta2)
+                p.add_(exp_avg, alpha = -lr)
 
-                denom = exp_avg_sq.div(bias_correction2).sqrt()
-                num = exp_avg.div(bias_correction1)
-                update = num / denom
+                exp_avg_sq.lerp_(grad * grad, 1. - beta2)                
 
-                p.add_(update, alpha = -lr)
-
-                state['steps'] = steps
+                state['steps'] += 1
 
         return loss
