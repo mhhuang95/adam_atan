@@ -7,23 +7,26 @@ from torch.optim.optimizer import Optimizer
 def exists(val):
     return val is not None
 
-class Adam(Optimizer):
+class Adopt(Optimizer):
     def __init__(
         self,
         params,
         lr = 1e-4,
+        eps = 1e-6,
         betas: tuple[float, float] = (0.9, 0.99),
-        eps = 1e-8,
         weight_decay = 0.,
+        decoupled_wd = True,
     ):
         assert lr > 0.
         assert all([0. <= beta <= 1. for beta in betas])
         assert weight_decay >= 0.
 
+        self._init_lr = lr
+        self.decoupled_wd = decoupled_wd
+
         defaults = dict(
             lr = lr,
             betas = betas,
-            eps = eps,
             weight_decay = weight_decay,
         )
 
@@ -43,12 +46,13 @@ class Adam(Optimizer):
         for group in self.param_groups:
             for p in filter(lambda p: exists(p.grad), group['params']):
 
-                grad, lr, wd, beta1, beta2, state, eps = p.grad, group['lr'], group['weight_decay'], *group['betas'], self.state[p], self.eps
+                grad, lr, wd, beta1, beta2, state, init_lr = p.grad, group['lr'], group['weight_decay'], *group['betas'], self.state[p], self._init_lr
 
                 # weight decay
 
                 if wd > 0.:
                     p.mul(1. - lr * wd)
+                
                 
                 # init state if needed
 
@@ -73,7 +77,7 @@ class Adam(Optimizer):
                 exp_avg_sq.lerp_(grad * grad, 1. - beta2)
 
                 denom = exp_avg_sq.div(bias_correction2).sqrt()
-                num = exp_avg.div(bias_correction1).add(eps)
+                num = exp_avg.div(bias_correction1)
                 update = num / denom
 
                 p.add_(update, alpha = -lr)
