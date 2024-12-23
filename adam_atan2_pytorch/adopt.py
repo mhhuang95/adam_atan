@@ -78,6 +78,11 @@ class Adopt(Optimizer):
 
                 update = grad.div(exp_avg_sq.sqrt().clamp(min = eps))
 
+                #clip with t ^ 0.25
+
+                clip_value = steps ** 0.25
+                update.clamp(min = -clip_value, max = clip_value)
+
                 exp_avg.lerp_(update, 1. - beta1)
 
                 p.add_(exp_avg, alpha = -lr)
